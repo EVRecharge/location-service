@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: location-service
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ev_location_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+server:
+  port: ${SERVER_PORT:8004}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    instance-id: ${spring.application.name}:${server.port}
+
+google:
+  maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:your_google_maps_api_key_here}
+
+logging:
+  level:
+    root: INFO
+    com.evcharging: DEBUG
+  file:
+    name: logs/location-service.log
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,info

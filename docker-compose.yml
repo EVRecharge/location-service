@@ -1,0 +1,60 @@
+version: '3.8'
+services:
+  location-service-postgres:
+    image: postgres:13-alpine
+    container_name: location-service-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-ev_location_db}
+    ports:
+      - "5434:5432"
+    volumes:
+      - location-service-db:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - location-service-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  location-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: location-service
+    ports:
+      - "8004:8004"
+    environment:
+      DB_HOST: location-service-postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ev_location_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      EUREKA_SERVER: ${EUREKA_SERVER:-http://localhost:8761/eureka/}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-your_api_key}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    networks:
+      - location-service-network
+    depends_on:
+      location-service-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+
+volumes:
+  location-service-db:
+    driver: local
+
+networks:
+  location-service-network:
+    driver: bridge
