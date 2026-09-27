@@ -21,10 +21,10 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long locationId;
 
-    @Column(nullable = false)
+    @Column(name = "entity_id", nullable = false)
     private Long entityId;
 
-    @Column(nullable = false)
+    @Column(name = "entity_type", nullable = false)
     private String entityType;
 
     @Column(nullable = false)
