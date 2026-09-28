@@ -5,6 +5,8 @@ import com.evcharging.locationservice.service.LocationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -12,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/locations")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class LocationController {
 
     @Autowired
@@ -20,6 +21,10 @@ public class LocationController {
 
     @PostMapping
     public ResponseEntity<?> saveLocation(@Valid @RequestBody LocationDTO locationDTO) {
+        if (!isEntity(locationDTO.getEntityType(), locationDTO.getEntityId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only save your own location"));
+        }
         try {
             LocationDTO saved = locationService.saveLocation(locationDTO);
             return ResponseEntity.status(HttpStatus.CREATED)
@@ -71,5 +76,19 @@ public class LocationController {
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /** True when the caller's JWT identifies them as this exact entityType + id (e.g. "USER", 42). */
+    private boolean isEntity(String entityType, Long id) {
+        if (id == null || entityType == null) {
+            return false;
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Long)) {
+            return false;
+        }
+        boolean matchesType = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_" + entityType.toUpperCase()));
+        return matchesType && id.equals(auth.getPrincipal());
     }
 }
